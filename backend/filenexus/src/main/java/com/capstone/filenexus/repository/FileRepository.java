@@ -1,29 +1,30 @@
-package com.capstone.filenexus.repository;
 
+package com.capstone.filenexus.repository;
 
 import com.capstone.filenexus.entity.FileEntity;
 import com.capstone.filenexus.entity.enums.FileStatus;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface FileRepository extends JpaRepository<FileEntity, Long> {
+public interface FileRepository extends
+        JpaRepository<FileEntity, Long>,
+        JpaSpecificationExecutor<FileEntity> {
 
-    List<FileEntity> findAllByUser_UserIdOrderByUploadedAtDesc(
-            Long userId
+    List<FileEntity> findByUserUserId(Long userId);
+
+    List<FileEntity> findByStatus(FileStatus status);
+
+    List<FileEntity> findByOriginalNameContainingIgnoreCase(
+            String keyword
     );
 
-    Optional<FileEntity> findByFileIdAndUser_UserId(
-            Long fileId,
-            Long userId
-    );
+    Optional<FileEntity> findBySha256Checksum(String sha256Checksum);
 
-    List<FileEntity> findAllByStatus(FileStatus status);
+    boolean existsBySha256Checksum(String sha256Checksum);
 
-    boolean existsBySha256ChecksumAndStatus(
-            String checksum,
-            FileStatus status
-    );
+    long countByStatus(FileStatus status);
 }
-

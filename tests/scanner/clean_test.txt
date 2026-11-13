@@ -1,0 +1,4 @@
+FileNexus end-to-end integration test.
+
+This is a normal document used to verify
+the S3, SQS and Python scanner workflow.

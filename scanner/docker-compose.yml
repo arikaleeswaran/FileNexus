@@ -1,0 +1,21 @@
+services:
+  clamav:
+    image: clamav/clamav:stable
+    container_name: filenexus-clamav
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:3310:3310"
+
+    volumes:
+      - clamav_database:/var/lib/clamav
+
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+volumes:
+  clamav_database:

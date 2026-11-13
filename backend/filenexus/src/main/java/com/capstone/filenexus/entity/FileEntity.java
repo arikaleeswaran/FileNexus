@@ -76,3 +76,4 @@ public class FileEntity {
     @OneToMany(mappedBy = "file")
     private List<FileAccessLog> accessLogs = new ArrayList<>();
 }
+
