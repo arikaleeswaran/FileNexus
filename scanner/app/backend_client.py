@@ -1,4 +1,4 @@
-
+import os
 import logging
 
 import httpx
@@ -8,7 +8,7 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-SCANNER_TOKEN = "FileNexus-Scanner-Dev-Secret-2026"
+SCANNER_TOKEN = os.getenv("SCANNER_TOKEN", "")
 
 SCANNER_HEADERS = {
     "X-Scanner-Token": SCANNER_TOKEN

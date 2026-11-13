@@ -195,7 +195,7 @@ CREATE TABLE file_access_logs (
             )
         ),
 
-    ip_address INET,
+    ip_address VARCHAR(45),
 
     denial_reason TEXT,
 

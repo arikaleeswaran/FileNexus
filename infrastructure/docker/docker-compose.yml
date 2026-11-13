@@ -1,26 +1,106 @@
-
 services:
   postgres:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: filenexus-postgres
     restart: unless-stopped
-
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB:-filenexus}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-    ports:
-      - "127.0.0.1:55432:5432"
-
     volumes:
       - filenexus-postgres-data:/var/lib/postgresql/data
-
+      - ../../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+    networks:
+      - filenexus-network
+
+  clamav:
+    image: clamav/clamav:stable
+    container_name: filenexus-clamav
+    restart: unless-stopped
+    volumes:
+      - clamav-database:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 180s
+    networks:
+      - filenexus-network
+
+  backend:
+    build:
+      context: ../../backend/filenexus
+      dockerfile: Dockerfile
+    container_name: filenexus-backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-filenexus}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      SQS_SCAN_QUEUE_URL: ${SQS_SCAN_QUEUE_URL}
+      FILENEXUS_AWS_REGION: ${AWS_REGION:-ap-south-1}
+      FILENEXUS_AWS_S3_QUARANTINE_BUCKET: ${S3_QUARANTINE_BUCKET}
+      FILENEXUS_AWS_S3_CLEAN_BUCKET: ${S3_CLEAN_BUCKET}
+      FILENEXUS_SCANNER_SECRET: ${SCANNER_TOKEN}
+      FILENEXUS_BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-false}
+      FILENEXUS_BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      FILENEXUS_BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      FILENEXUS_BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - filenexus-network
+
+  scanner:
+    build:
+      context: ../../scanner
+      dockerfile: Dockerfile
+    container_name: filenexus-scanner
+    restart: unless-stopped
+    environment:
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      SQS_SCAN_QUEUE_URL: ${SQS_SCAN_QUEUE_URL}
+      S3_QUARANTINE_BUCKET: ${S3_QUARANTINE_BUCKET}
+      SPRING_BOOT_BASE_URL: http://backend:8080
+      CLAMD_HOST: clamav
+      CLAMD_PORT: 3310
+      CLAMD_TIMEOUT_SECONDS: 120
+      SCANNER_TOKEN: ${SCANNER_TOKEN}
+    depends_on:
+      clamav:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    networks:
+      - filenexus-network
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ""
+    container_name: filenexus-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - filenexus-network
 
 volumes:
   filenexus-postgres-data:
+  clamav-database:
+
+networks:
+  filenexus-network:
+    driver: bridge
