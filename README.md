@@ -10,7 +10,7 @@ The application integrates **React, Spring Boot, Python FastAPI, PostgreSQL, AWS
 |---|---|
 | Application | FileNexus |
 | Hosting Platform | AWS EC2 |
-| Deployment URL | http://13.207.201.221/ | arikaleeswaran.me
+| Deployment URL | arikaleeswaran.me | 
 | Backend | Spring Boot |
 | Frontend | React + Vite |
 | Database | PostgreSQL |
